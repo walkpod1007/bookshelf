@@ -234,7 +234,7 @@ async function fetchCover(title, author) {
   if (coverCache[key] !== undefined) return coverCache[key];
   try {
     const q = encodeURIComponent(title + (author ? ' ' + author : ''));
-    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&langRestrict=zh`);
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
     const d = await r.json();
     const img = d.items?.[0]?.volumeInfo?.imageLinks?.thumbnail?.replace('http://', 'https://') ?? null;
     coverCache[key] = img;
