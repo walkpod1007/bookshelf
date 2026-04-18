@@ -236,7 +236,8 @@ async function fetchCover(title, author) {
     const q = encodeURIComponent(title + (author ? ' ' + author : ''));
     const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&key=AIzaSyCXzkk2-zRTEy1emo20OiKOl-pjx7m7w74`);
     const d = await r.json();
-    const img = d.items?.[0]?.volumeInfo?.imageLinks?.thumbnail?.replace('http://', 'https://') ?? null;
+    const thumb = d.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ?? d.items?.[0]?.volumeInfo?.imageLinks?.smallThumbnail ?? null;
+    const img = thumb ? thumb.replace('http://', 'https://').replace('zoom=1', 'zoom=0') : null;
     coverCache[key] = img;
     return img;
   } catch {
