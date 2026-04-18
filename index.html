@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>數位書櫃</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #888;
+    --accent: #c8a96e;
+    --tag-bg: #252525;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 2rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: .05em; color: var(--accent); }
+  header span { font-size: .85rem; color: var(--muted); }
+
+  .controls {
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .filter-group { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: .75rem; color: var(--muted); margin-right: .2rem; }
+  button.chip {
+    padding: .3rem .75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--tag-bg);
+    color: var(--muted);
+    font-size: .78rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  button.chip:hover { border-color: var(--accent); color: var(--text); }
+  button.chip.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  .search-wrap { margin-left: auto; }
+  input[type=search] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: .3rem .8rem;
+    border-radius: 6px;
+    font-size: .83rem;
+    outline: none;
+    width: 180px;
+  }
+  input[type=search]:focus { border-color: var(--accent); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+  @media (min-width: 600px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: default;
+    transition: transform .15s, box-shadow .15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+  .cover-wrap {
+    aspect-ratio: 2/3;
+    background: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .cover-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cover-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: .8rem;
+    text-align: center;
+    gap: .4rem;
+    height: 100%;
+  }
+  .cover-placeholder .spine-title {
+    font-size: .72rem;
+    line-height: 1.4;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .cover-placeholder .spine-author {
+    font-size: .62rem;
+    color: var(--muted);
+  }
+
+  .card-body { padding: .6rem .7rem .75rem; display: flex; flex-direction: column; gap: .3rem; flex: 1; }
+  .card-title { font-size: .8rem; line-height: 1.4; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-author { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-tags { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: auto; padding-top: .3rem; }
+  .tag {
+    font-size: .65rem;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tag.cat { color: var(--accent); border-color: #3a2e1a; background: #1e1a0e; }
+
+  .stock-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+  }
+  .stock-dot.out { background: #888; }
+
+  .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 3rem; font-size: .9rem; }
+  .loading { text-align: center; padding: 4rem; color: var(--muted); }
+
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    padding: .6rem 1.2rem;
+    font-size: .82rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>書櫃</h1>
+  <span id="count-label">載入中…</span>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="A">A 櫃實拍</button>
+  <button class="tab-btn" data-tab="OCR">全書庫 OCR</button>
+</div>
+
+<div class="controls">
+  <div class="filter-group">
+    <span class="filter-label">分類</span>
+    <div id="cat-filters"></div>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">書櫃</span>
+    <div id="shelf-filters"></div>
+  </div>
+  <div class="search-wrap">
+    <input type="search" id="search" placeholder="搜書名 / 作者…">
+  </div>
+</div>
+
+<div id="grid" class="grid">
+  <div class="loading">讀取書單中…</div>
+</div>
+
+<script>
+const SHEET_ID = '1GRQqaQsOHGFcyn_9ZObSshpyLGA3vjLBgY4-PcEC4zE';
+const TABS = {
+  A: 'A櫃實拍',
+  OCR: '全書庫OCR'
+};
+
+let allBooks = { A: [], OCR: [] };
+let currentTab = 'A';
+let activeCat = 'all';
+let activeShelf = 'all';
+let searchQ = '';
+let coverCache = {};
+
+function sheetUrl(tabName) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+}
+
+async function fetchSheet(tabName) {
+  const res = await fetch(sheetUrl(tabName));
+  const text = await res.text();
+  const json = JSON.parse(text.slice(47, -2));
+  const cols = json.table.cols.map(c => c.label);
+  return json.table.rows.map(row => {
+    const obj = {};
+    row.c.forEach((cell, i) => {
+      obj[cols[i] || `col${i}`] = cell ? (cell.v ?? cell.f ?? '') : '';
+    });
+    return obj;
+  }).filter(r => r['書名']);
+}
+
+async function fetchCover(title, author) {
+  const key = title;
+  if (coverCache[key] !== undefined) return coverCache[key];
+  try {
+    const q = encodeURIComponent(title + (author ? ' ' + author : ''));
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&langRestrict=zh`);
+    const d = await r.json();
+    const img = d.items?.[0]?.volumeInfo?.imageLinks?.thumbnail?.replace('http://', 'https://') ?? null;
+    coverCache[key] = img;
+    return img;
+  } catch {
+    coverCache[key] = null;
+    return null;
+  }
+}
+
+function getBooks() { return allBooks[currentTab] || []; }
+
+function filteredBooks() {
+  return getBooks().filter(b => {
+    if (activeCat !== 'all' && b['分類'] !== activeCat) return false;
+    if (activeShelf !== 'all' && String(b['書櫃']) !== activeShelf) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      if (!String(b['書名']).toLowerCase().includes(q) && !String(b['作者']).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function buildFilters() {
+  const books = getBooks();
+  const cats = [...new Set(books.map(b => b['分類']).filter(Boolean))].sort();
+  const shelves = [...new Set(books.map(b => String(b['書櫃'])).filter(Boolean))].sort();
+
+  document.getElementById('cat-filters').innerHTML =
+    `<button class="chip ${activeCat==='all'?'active':''}" data-cat="all">全部</button>` +
+    cats.map(c => `<button class="chip ${activeCat===c?'active':''}" data-cat="${c}">${c}</button>`).join('');
+
+  document.getElementById('shelf-filters').innerHTML =
+    `<button class="chip ${activeShelf==='all'?'active':''}" data-shelf="all">全部</button>` +
+    shelves.map(s => `<button class="chip ${activeShelf===s?'active':''}" data-shelf="${s}">${s} 櫃</button>`).join('');
+}
+
+async function renderGrid() {
+  const books = filteredBooks();
+  const grid = document.getElementById('grid');
+  document.getElementById('count-label').textContent = `${books.length} 本`;
+
+  if (!books.length) {
+    grid.innerHTML = '<div class="empty">沒有符合的書</div>';
+    return;
+  }
+
+  grid.innerHTML = books.map((b, i) => {
+    const inStock = String(b['在庫']).includes('✅');
+    return `<div class="card" data-idx="${i}">
+      <div class="cover-wrap">
+        <div class="cover-placeholder">
+          <div class="spine-title">${b['書名']}</div>
+          <div class="spine-author">${b['作者'] || ''}</div>
+        </div>
+        <div class="stock-dot ${inStock?'':'out'}"></div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${b['書名']}</div>
+        ${b['作者'] ? `<div class="card-author">${b['作者']}</div>` : ''}
+        <div class="card-tags">
+          ${b['分類'] ? `<span class="tag cat">${b['分類']}</span>` : ''}
+          ${b['書櫃'] ? `<span class="tag">${b['書櫃']}櫃</span>` : ''}
+          ${b['層'] ? `<span class="tag">${b['層']}層</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // async load covers
+  books.forEach(async (b, i) => {
+    const cover = await fetchCover(b['書名'], b['作者']);
+    if (!cover) return;
+    const card = grid.querySelector(`[data-idx="${i}"] .cover-wrap`);
+    if (!card) return;
+    const img = document.createElement('img');
+    img.src = cover;
+    img.alt = b['書名'];
+    img.onerror = () => img.remove();
+    card.querySelector('.cover-placeholder')?.remove();
+    card.insertBefore(img, card.firstChild);
+  });
+}
+
+async function init() {
+  try {
+    const [a, ocr] = await Promise.all([fetchSheet(TABS.A), fetchSheet(TABS.OCR)]);
+    allBooks.A = a;
+    allBooks.OCR = ocr;
+    buildFilters();
+    renderGrid();
+  } catch(e) {
+    document.getElementById('grid').innerHTML = `<div class="empty">讀取失敗：${e.message}</div>`;
+  }
+}
+
+// events
+document.querySelector('.tab-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTab = btn.dataset.tab;
+  activeCat = 'all'; activeShelf = 'all';
+  buildFilters();
+  renderGrid();
+});
+
+document.getElementById('cat-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.chip[data-cat]');
+  if (!btn) return;
+  activeCat = btn.dataset.cat;
+  buildFilters();
+  renderGrid();
+});
+
+document.getElementById('shelf-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.chip[data-shelf]');
+  if (!btn) return;
+  activeShelf = btn.dataset.shelf;
+  buildFilters();
+  renderGrid();
+});
+
+let searchTimer;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { searchQ = e.target.value.trim(); renderGrid(); }, 250);
+});
+
+init();
+</script>
+</body>
+</html>
